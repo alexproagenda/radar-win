@@ -1,0 +1,27 @@
+name: Test WIN Radar
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-radar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar NumPy
+        run: pip install numpy
+
+      - name: Executar teste do WIN Radar
+        working-directory: src
+        run: python test_win_radar.py
