@@ -393,10 +393,15 @@ def latest(b, window=20, lookback=3):
         "buy_absorption": bool(
             radar["buy_absorption"][i]
         ),
-
-        "sell_absorption": bool(
-            radar["sell_absorption"][i]
+"buy_loss": round(
+            float(radar["buy_loss"][i]),
+            4,
         ),
 
-        "
+        "sell_loss": round(
+            float(radar["sell_loss"][i]),
+            4,
+        ),
+    }
+      
         
