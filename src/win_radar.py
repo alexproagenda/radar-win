@@ -1,17 +1,16 @@
 """
-WIN Radar - mathematical layer on top of orderflow.py.
+WIN Radar - camada matemática sobre o orderflow.py.
 
-This module does NOT modify the original orderflow engine.
+Este módulo NÃO modifica o motor original.
 
-It measures:
-    - aggressive buying/selling efficiency
-    - price response to aggressive flow
-    - absorption / loss of efficiency
-    - movement state
-    - radar state
+Ele mede:
+- eficiência de compra e venda
+- resposta do preço ao fluxo agressivo
+- absorção / perda de eficiência
+- estado do movimento
+- sinal do Radar
 
-The calculations are intentionally transparent.
-No trading order or automatic buy/sell recommendation is generated.
+As análises são matemáticas e não geram ordens automáticas.
 """
 
 from __future__ import annotations
@@ -24,18 +23,16 @@ import numpy as np
 # ---------------------------------------------------------------------------
 
 def _safe_array(values, dtype=float):
-    """Convert a bar field to a numpy array safely."""
+    """Converte um campo das barras para numpy com segurança."""
     return np.asarray(values, dtype=dtype)
 
 
 def _rolling_median(values, window=20):
     """
-    Rolling median including the current bar.
-
-    A small and transparent implementation is used so the module
-    does not require pandas.
+    Calcula a mediana móvel incluindo a barra atual.
     """
     values = _safe_array(values)
+
     out = np.full(values.size, np.nan, dtype=float)
 
     if values.size == 0:
@@ -45,6 +42,7 @@ def _rolling_median(values, window=20):
 
     for i in range(values.size):
         start = max(0, i - window + 1)
+
         sample = values[start:i + 1]
         finite = sample[np.isfinite(sample)]
 
@@ -55,8 +53,9 @@ def _rolling_median(values, window=20):
 
 
 def _safe_ratio(numerator, denominator, floor=1e-9):
-    """Safe division preserving the sign of the numerator."""
+    """Divisão segura."""
     denominator = np.maximum(np.abs(denominator), floor)
+
     return numerator / denominator
 
 
@@ -66,30 +65,13 @@ def _safe_ratio(numerator, denominator, floor=1e-9):
 
 def efficiency(b, window=20):
     """
-    Measure price displacement produced by aggressive volume.
+    Mede quanto o preço se deslocou em relação ao volume agressivo.
 
-    Buy efficiency:
-        upward price movement / aggressive buying volume.
+    Compra:
+        movimento para cima / volume agressor comprador.
 
-    Sell efficiency:
-        downward price movement / aggressive selling volume.
-
-    The raw values are also normalized against their recent median,
-    producing an easier-to-read efficiency score.
-
-    Interpretation:
-
-        > 1.0
-            stronger response than the recent reference.
-
-        around 1.0
-            normal response.
-
-        < 1.0
-            weaker response.
-
-        near 0
-            aggressive volume produced little directional movement.
+    Venda:
+        movimento para baixo / volume agressor vendedor.
     """
 
     close = _safe_array(b["close"])
@@ -100,6 +82,7 @@ def efficiency(b, window=20):
 
     if n == 0:
         empty = np.array([], dtype=float)
+
         return {
             "buy_efficiency": empty,
             "sell_efficiency": empty,
@@ -114,26 +97,21 @@ def efficiency(b, window=20):
     if n > 1:
         price_move[1:] = close[1:] - close[:-1]
 
-    # Only movement in the corresponding direction counts.
     buy_move = np.maximum(price_move, 0.0)
     sell_move = np.maximum(-price_move, 0.0)
 
-    # Price displacement per aggressive contract.
     buy_raw = _safe_ratio(buy_move, ask)
     sell_raw = _safe_ratio(sell_move, bid)
 
-    # Recent typical response.
     buy_ref = _rolling_median(buy_raw, window)
     sell_ref = _rolling_median(sell_raw, window)
 
-    # Ignore zero references when normalising.
     buy_ref = np.maximum(buy_ref, 1e-9)
     sell_ref = np.maximum(sell_ref, 1e-9)
 
     buy_eff = buy_raw / buy_ref
     sell_eff = sell_raw / sell_ref
 
-    # When there is no directional movement, efficiency is zero.
     buy_eff = np.where(buy_move > 0, buy_eff, 0.0)
     sell_eff = np.where(sell_move > 0, sell_eff, 0.0)
 
@@ -147,9 +125,7 @@ def efficiency(b, window=20):
         "net_efficiency": net,
         "price_move": price_move,
     }
-
-
-# ---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 # 2. Absorption / loss of efficiency
 # ---------------------------------------------------------------------------
 
@@ -160,20 +136,17 @@ def absorption_signal(
     displacement_threshold=0.35,
 ):
     """
-    Detect high aggression with weak price response.
+    Detecta forte agressão com pouca resposta do preço.
 
-    Buy absorption:
-        strong aggressive buying
+    Compra:
+        muita agressão compradora
         +
-        weak upward price response.
+        pouca alta do preço.
 
-    Sell absorption:
-        strong aggressive selling
+    Venda:
+        muita agressão vendedora
         +
-        weak downward price response.
-
-    This is intentionally different from orderflow.py's existing
-    absorption calculation.
+        pouca queda do preço.
     """
 
     close = _safe_array(b["close"])
@@ -202,8 +175,6 @@ def absorption_signal(
     if n > 1:
         price_move[1:] = close[1:] - close[:-1]
 
-    buy_move = np.maximum(price_move, 0.0)
-    sell_move = np.maximum(-price_move, 0.0)
     move_abs = np.abs(price_move)
 
     ask_ref = _rolling_median(ask, window)
@@ -214,4 +185,218 @@ def absorption_signal(
     bid_ref = np.maximum(bid_ref, 1e-9)
     move_ref = np.maximum(move_ref, 1e-9)
 
-    # How unusual
+    # Quanto a agressão está acima do comportamento recente?
+    buy_pressure = ask / ask_ref
+    sell_pressure = bid / bid_ref
+
+    # Quanto o preço se movimentou em relação ao normal recente?
+    response_ratio = move_abs / move_ref
+
+    # Perda de eficiência:
+    # muita agressão + pouca resposta = perda de eficiência.
+    buy_loss = buy_pressure / np.maximum(response_ratio, 0.25)
+    sell_loss = sell_pressure / np.maximum(response_ratio, 0.25)
+
+    # Possível absorção compradora.
+    buy_absorption = (
+        (buy_pressure >= aggression_threshold)
+        & (response_ratio <= displacement_threshold)
+        & (ask > bid)
+    )
+
+    # Possível absorção vendedora.
+    sell_absorption = (
+        (sell_pressure >= aggression_threshold)
+        & (response_ratio <= displacement_threshold)
+        & (bid > ask)
+    )
+
+    score = buy_loss - sell_loss
+
+    return {
+        "buy_absorption": buy_absorption,
+        "sell_absorption": sell_absorption,
+        "buy_pressure": buy_pressure,
+        "sell_pressure": sell_pressure,
+        "response_ratio": response_ratio,
+        "buy_loss": buy_loss,
+        "sell_loss": sell_loss,
+        "score": score,
+    }
+    # ---------------------------------------------------------------------------
+# 3. Movement state
+# ---------------------------------------------------------------------------
+
+def movement_state(b, lookback=3):
+    """
+    Classifica o movimento recente do preço.
+
+        +1 = alta
+         0 = neutro
+        -1 = queda
+    """
+
+    close = _safe_array(b["close"])
+    n = close.size
+
+    state = np.zeros(n, dtype=np.int8)
+
+    if n <= lookback:
+        return state
+
+    for i in range(lookback, n):
+        move = close[i] - close[i - lookback]
+
+        if move > 0:
+            state[i] = 1
+
+        elif move < 0:
+            state[i] = -1
+
+    return state
+
+
+def movement_labels(state):
+    """Converte o estado numérico em texto."""
+
+    state = np.asarray(state)
+
+    return np.where(
+        state > 0,
+        "UP",
+        np.where(
+            state < 0,
+            "DOWN",
+            "NEUTRAL",
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 4. Radar signal
+# ---------------------------------------------------------------------------
+
+def radar_signal(b, window=20, lookback=3):
+    """
+    Combina movimento, eficiência e absorção.
+
+    Estados possíveis:
+
+        CONFIRMED_MOVE
+        CONTINUATION
+        LOSS_OF_EFFICIENCY
+        ATTENTION
+        NEUTRAL
+
+    São estados analíticos.
+    Não são ordens de compra ou venda.
+    """
+
+    eff = efficiency(b, window=window)
+
+    absorb = absorption_signal(
+        b,
+        window=window,
+    )
+
+    movement = movement_state(
+        b,
+        lookback=lookback,
+    )
+
+    n = len(movement)
+
+    labels = np.full(
+        n,
+        "NEUTRAL",
+        dtype=object,
+    )
+
+    for i in range(n):
+
+        state = movement[i]
+
+        buy_eff = eff["buy_efficiency"][i]
+        sell_eff = eff["sell_efficiency"][i]
+
+        buy_abs = absorb["buy_absorption"][i]
+        sell_abs = absorb["sell_absorption"][i]
+
+        # ---------------------------------------------------------------
+        # 1. Absorção tem prioridade.
+        # ---------------------------------------------------------------
+
+        if buy_abs or sell_abs:
+            labels[i] = "ATTENTION"
+            continue
+
+        # ---------------------------------------------------------------
+        # 2. Movimento com perda de eficiência.
+        # ---------------------------------------------------------------
+
+        if state > 0 and buy_eff < 1.0:
+            labels[i] = "LOSS_OF_EFFICIENCY"
+            continue
+
+        if state < 0 and sell_eff <
+        # ---------------------------------------------------------------------------
+# 5. Latest radar snapshot
+# ---------------------------------------------------------------------------
+
+def latest(b, window=20, lookback=3):
+    """
+    Retorna somente o estado mais recente do Radar.
+
+    Útil para futura integração com API ou interface.
+    """
+
+    radar = radar_signal(
+        b,
+        window=window,
+        lookback=lookback,
+    )
+
+    if len(radar["signal"]) == 0:
+        return {
+            "signal": "NEUTRAL",
+            "movement": "NEUTRAL",
+            "buy_efficiency": 0.0,
+            "sell_efficiency": 0.0,
+            "net_efficiency": 0.0,
+            "buy_absorption": False,
+            "sell_absorption": False,
+            "buy_loss": 0.0,
+            "sell_loss": 0.0,
+        }
+
+    i = -1
+
+    return {
+        "signal": str(radar["signal"][i]),
+        "movement": str(radar["movement_label"][i]),
+
+        "buy_efficiency": round(
+            float(radar["buy_efficiency"][i]),
+            4,
+        ),
+
+        "sell_efficiency": round(
+            float(radar["sell_efficiency"][i]),
+            4,
+        ),
+
+        "net_efficiency": round(
+            float(radar["net_efficiency"][i]),
+            4,
+        ),
+
+        "buy_absorption": bool(
+            radar["buy_absorption"][i]
+        ),
+
+        "sell_absorption": bool(
+            radar["sell_absorption"][i]
+        ),
+
+        "
+        
