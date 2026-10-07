@@ -327,13 +327,11 @@ def radar_signal(b, window=20, lookback=3):
         if state < 0 and sell_eff >buy_eff and sell_eff >= 1.5:
             labels[i] ="CONFIRMED_MOVE"
             continue
-        if state > 0 and buy_eff > 
-        sell_eff:
+        if state > 0 and buy_eff >  sell_eff:
             labels[i] = "CONTINUATION"
             continue
 
-        if state < 0 and sell_eff >
-        buy_eff:
+        if state < 0 and sell_eff >buy_eff:
             labels[i] = "CONTINUATION"
             continue
     return {
