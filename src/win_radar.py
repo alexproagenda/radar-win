@@ -321,8 +321,9 @@ def radar_signal(b, window=20, lookback=3):
             labels[i] = "LOSS_OF_EFFICIENCY"
             continue
         if state > 0 and buy_eff >
-        sell_eff and buy_eff >= 1.5:
-            labels[i] = "CONFIRMED_MOVE"
+sell_eff and buy_eff >= 1.5:
+            labels[i] = 
+"CONFIRMED_MOVE"
             continue
 
         if state < 0 and sell_eff >
