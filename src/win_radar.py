@@ -334,7 +334,7 @@ def radar_signal(b, window=20, lookback=3):
         # 2. Movimento com perda de eficiência.
         # ---------------------------------------------------------------
 
-     if state > 0 and buy_eff <
+        if state > 0 and buy_eff <
 1.0:
             labels[i] =
 "LOSS_OF_EFFICIENCY"
