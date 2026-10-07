@@ -338,7 +338,58 @@ def radar_signal(b, window=20, lookback=3):
             labels[i] = "LOSS_OF_EFFICIENCY"
             continue
 
-        if state < 0 and sell_eff <
+        if state < 0 and sell_eff < 1.0:
+        labels[i] = "LOSS_OF_EFFICIENCY"
+    continue
+    if state > 0 and buy_eff > sell_eff and buy_eff >= 1.5:
+    labels[i] = "CONFIRMED_MOVE"
+    continue
+
+if state < 0 and sell_eff > buy_eff and sell_eff >= 1.5:
+    labels[i] = "CONFIRMED_MOVE"
+    continue
+   if state > 0 and buy_eff > sell_eff:
+    labels[i] = "CONTINUATION"
+    continue
+
+if state < 0 and sell_eff > buy_eff:
+    labels[i] = "CONTINUATION"
+    continue
+    return {
+        "movement": movement,
+        "movement_label": movement_labels(movement),
+
+        "buy_efficiency": eff["buy_efficiency"],
+        "sell_efficiency": eff["sell_efficiency"],
+        "net_efficiency": eff["net_efficiency"],
+
+        "buy_absorption": absorb["buy_absorption"],
+        "sell_absorption": absorb["sell_absorption"],
+
+        "buy_loss": absorb["buy_loss"],
+        "sell_loss": absorb["sell_loss"],
+
+        "signal": labels,
+    }
+    return {
+        "movement": movement,
+        "movement_label": movement_labels(movement),
+
+        "buy_efficiency": eff["buy_efficiency"],
+        "sell_efficiency": eff["sell_efficiency"],
+        "net_efficiency": eff["net_efficiency"],
+
+        "buy_absorption": absorb["buy_absorption"],
+        "sell_absorption": absorb["sell_absorption"],
+
+        "buy_loss": absorb["buy_loss"],
+        "sell_loss": absorb["sell_loss"],
+
+        "signal": labels,
+    }
+    if state < 0 and sell_eff > buy_eff:
+    labels[i] = "CONTINUATION"
+    continue
         # ---------------------------------------------------------------------------
 # 5. Latest radar snapshot
 # ---------------------------------------------------------------------------
@@ -391,12 +442,18 @@ def latest(b, window=20, lookback=3):
         ),
 
         "buy_absorption": bool(
-            radar["buy_absorption"][i]
-        ),
+    radar["buy_absorption"][i]
+),
+
+"sell_absorption": bool(
+    radar["sell_absorption"][i]
+),
+
 "buy_loss": round(
-            float(radar["buy_loss"][i]),
-            4,
-        ),
+    float(radar["buy_loss"][i]),
+    4,
+),
+            
 
         "sell_loss": round(
             float(radar["sell_loss"][i]),
