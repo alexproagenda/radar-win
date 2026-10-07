@@ -334,27 +334,40 @@ def radar_signal(b, window=20, lookback=3):
         # 2. Movimento com perda de eficiência.
         # ---------------------------------------------------------------
 
-        if state > 0 and buy_eff < 1.0:
-            labels[i] = "LOSS_OF_EFFICIENCY"
+     if state > 0 and buy_eff <
+1.0:
+            labels[i] =
+"LOSS_OF_EFFICIENCY"
             continue
 
-        if state < 0 and sell_eff < 1.0:
-        labels[i] = "LOSS_OF_EFFICIENCY"
-    continue
-    if state > 0 and buy_eff > sell_eff and buy_eff >= 1.5:
-    labels[i] = "CONFIRMED_MOVE"
-    continue
+        if state < 0 and sell_eff 
+< 1.0:
+            labels[i] = 
+"LOSS_OF_EFFICIENCY"
+            continue
 
-if state < 0 and sell_eff > buy_eff and sell_eff >= 1.5:
-    labels[i] = "CONFIRMED_MOVE"
-    continue
-   if state > 0 and buy_eff > sell_eff:
-    labels[i] = "CONTINUATION"
-    continue
+        if state > 0 and buy_eff >
+sell_eff and buy_eff >= 1.5:
+            labels[i] = 
+"CONFIRMED_MOVE"
+            continue
 
-if state < 0 and sell_eff > buy_eff:
-    labels[i] = "CONTINUATION"
-    continue
+        if state < 0 and sell_eff > 
+buy_eff and sell_eff >= 1.5:
+            labels[i] = 
+"CONFIRMED_MOVE"
+            continue
+        if state > 0 and buy_eff > 
+sell_eff:
+            labels[i] = 
+"CONTINUATION"
+            continue
+
+        if state < 0 and sell_eff >
+buy_eff:
+            labels[i] =
+"CONTINUATION"
+            continue
     return {
         "movement": movement,
         "movement_label": movement_labels(movement),
