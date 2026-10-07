@@ -279,17 +279,6 @@ def movement_labels(state):
 def radar_signal(b, window=20, lookback=3):
     """
     Combina movimento, eficiência e absorção.
-
-    Estados possíveis:
-
-        CONFIRMED_MOVE
-        CONTINUATION
-        LOSS_OF_EFFICIENCY
-        ATTENTION
-        NEUTRAL
-
-    São estados analíticos.
-    Não são ordens de compra ou venda.
     """
 
     eff = efficiency(b, window=window)
@@ -311,7 +300,6 @@ def radar_signal(b, window=20, lookback=3):
         "NEUTRAL",
         dtype=object,
     )
-
     for i in range(n):
 
         state = movement[i]
@@ -322,39 +310,29 @@ def radar_signal(b, window=20, lookback=3):
         buy_abs = absorb["buy_absorption"][i]
         sell_abs = absorb["sell_absorption"][i]
 
-        # ---------------------------------------------------------------
-        # 1. Absorção tem prioridade.
-        # ---------------------------------------------------------------
-
         if buy_abs or sell_abs:
             labels[i] = "ATTENTION"
             continue
-
-        # ---------------------------------------------------------------
-        # 2. Movimento com perda de eficiência.
-        # ---------------------------------------------------------------
-
-        if state > 0 and buy_eff <
+        if state > 0 and buy_eff < 
 1.0:
-            labels[i] =
-"LOSS_OF_EFFICIENCY"
-            continue
-
-        if state < 0 and sell_eff 
-< 1.0:
             labels[i] = 
 "LOSS_OF_EFFICIENCY"
             continue
 
+        if state < 0 and sell_eff < 
+1.0:
+            labels[i] = 
+"LOSS_OF_EFFICIENCY"
+            continue
         if state > 0 and buy_eff >
 sell_eff and buy_eff >= 1.5:
             labels[i] = 
 "CONFIRMED_MOVE"
             continue
 
-        if state < 0 and sell_eff > 
+        if state < 0 and sell_eff >
 buy_eff and sell_eff >= 1.5:
-            labels[i] = 
+            labels[i] =
 "CONFIRMED_MOVE"
             continue
         if state > 0 and buy_eff > 
@@ -365,7 +343,7 @@ sell_eff:
 
         if state < 0 and sell_eff >
 buy_eff:
-            labels[i] =
+            labels[i] = 
 "CONTINUATION"
             continue
     return {
@@ -384,26 +362,8 @@ buy_eff:
 
         "signal": labels,
     }
-    return {
-        "movement": movement,
-        "movement_label": movement_labels(movement),
 
-        "buy_efficiency": eff["buy_efficiency"],
-        "sell_efficiency": eff["sell_efficiency"],
-        "net_efficiency": eff["net_efficiency"],
-
-        "buy_absorption": absorb["buy_absorption"],
-        "sell_absorption": absorb["sell_absorption"],
-
-        "buy_loss": absorb["buy_loss"],
-        "sell_loss": absorb["sell_loss"],
-
-        "signal": labels,
-    }
-    if state < 0 and sell_eff > buy_eff:
-    labels[i] = "CONTINUATION"
-    continue
-        # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
 # 5. Latest radar snapshot
 # ---------------------------------------------------------------------------
 
@@ -455,21 +415,22 @@ def latest(b, window=20, lookback=3):
         ),
 
         "buy_absorption": bool(
-    radar["buy_absorption"][i]
-),
+            radar["buy_absorption"][i]
+        ),
 
-"sell_absorption": bool(
-    radar["sell_absorption"][i]
-),
+        "sell_absorption": bool(
+            radar["sell_absorption"][i]
+        ),
 
-"buy_loss": round(
-    float(radar["buy_loss"][i]),
-    4,
-),
+        "buy_loss": round(
+            float(radar["buy_loss"][i]),
+            4,
+        ),
             
 
         "sell_loss": round(
-            float(radar["sell_loss"][i]),
+            float(radar["sell_loss"]
+[i]),
             4,
         ),
     }
